@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+   com.saagarjha.DarkNight.plist
+   DarkNight
+
+   Created by Saagar Jha on 6/5/18.
+   Copyright (c) 2018 Saagar Jha. All rights reserved.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.saagarjha.DarkNight</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/DarkNight</string>
+    </array>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
