@@ -1,0 +1,4 @@
+language: objective-c
+osx_image: xcode10.1
+
+script: xcodebuild -project DarkNight.xcodeproj -scheme DarkNight CODE_SIGNING_ALLOWED=NO
