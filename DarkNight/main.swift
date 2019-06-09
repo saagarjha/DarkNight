@@ -6,44 +6,32 @@
 //  Copyright © 2018 Saagar Jha. All rights reserved.
 //
 
-import Foundation
+import AppKit
 
-let skylight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Skylight", RTLD_LAZY)
-let SLSGetAppearanceThemeLegacy = unsafeBitCast(dlsym(skylight, "SLSGetAppearanceThemeLegacy"), to: (@convention (c) () -> Bool).self)
-let SLSSetAppearanceThemeLegacy = unsafeBitCast(dlsym(skylight, "SLSSetAppearanceThemeLegacy"), to: (@convention (c) (Bool) -> Void).self)
-let coreBrightness = dlopen("/System/Library/PrivateFrameworks/CoreBrightness.framework/CoreBrightness", RTLD_LAZY)
+let defaults = UserDefaults(suiteName: "com.saagarjha.DarkNight")
+// Create an application
+_ = NSApplication.shared
 
-@objc protocol CBBlueLightClientProtocol {
-	init()
-	func setStatusNotificationBlock(_ block: @escaping @convention(block) (UnsafePointer<ObjCBool>) -> Void)
-	func getBlueLightStatus(_ pointer: UnsafePointer<ObjCBool>)
-}
-
-let CBBlueLightClient: CBBlueLightClientProtocol.Type! = {
-	return unsafeBitCast(NSClassFromString("CBBlueLightClient"), to: CBBlueLightClientProtocol.Type?.self)
-}()
-
-let blueLightClient = CBBlueLightClient.init()
-
-let nightShiftHandler: @convention(block) (UnsafePointer<ObjCBool>) -> Void = { pointer in
-	// struct status { BOOL active, BOOL enabled, ...
-	SLSSetAppearanceThemeLegacy(pointer[1].boolValue)
-}
-
-blueLightClient.setStatusNotificationBlock(nightShiftHandler)
-
-DistributedNotificationCenter.default().addObserver(forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: OperationQueue.main) { notification in
+func appearanceChanged() {
 	let task = Process()
-	task.launchPath = "/usr/local/bin/night-shift"
-	task.arguments = SLSGetAppearanceThemeLegacy() ? ["enabled"] : []
+	task.launchPath = defaults?.string(forKey: "command") ?? "/usr/local/bin/dark-night"
+	let theme = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua])
+	task.arguments = theme == .darkAqua ? ["enabled"] : []
 	task.launch()
 	task.waitUntilExit()
+	// For compatibility with applications using this method of detection
+	CFPreferencesSetValue("AppleInterfaceStyle" as CFString, theme == .darkAqua ? "Dark" as CFPropertyList : nil, kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost)
+	CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
+	DistributedNotificationCenter.default().post(name: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil)
+}
+
+let observation = NSApp.observe(\.effectiveAppearance, options: [.old, .new]) { _, change in
+	if change.oldValue != change.newValue {
+		appearanceChanged()
+	}
 }
 
 // Set the initial state
-let buffer = UnsafeMutablePointer<ObjCBool>.allocate(capacity: 100)
-blueLightClient.getBlueLightStatus(buffer)
-nightShiftHandler(buffer)
-buffer.deallocate()
+appearanceChanged()
 
-RunLoop.main.run()
+NSApp.run()
